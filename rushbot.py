@@ -20,9 +20,17 @@ while True:
 
         entities_by_distance = game_map.nearby_entities_by_distance(ship)
         logging.info("Entities by distance: %s" % entities_by_distance)
-        planets_by_distance = {distance : planet for distance, planet in entities_by_distance.items() if isinstance(planet, hlt.entity.Planet)}
+        planets_by_distance = list(
+            filter(
+                lambda entry : isinstance(entry[1], hlt.entity.Planet), 
+                entities_by_distance.items()
+            )
+        )
         logging.info("Planets by distance: %s" % planets_by_distance)
-        closest_planets = sorted(planets_by_distance, key=planets_by_distance.get)
+        closest_planets = sorted(list(planets_by_distance), key=lambda tup : tup[0])
+        logging.info("Closest planets: %s" % closest_planets)
+        closets_planets = [tup[0] for tup in closest_planets]
+        logging.info("Closest planets: %s" % closest_planets)
         # closest_planet = closest_planets[0]
 
         for planet in closest_planets:
