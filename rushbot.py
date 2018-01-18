@@ -19,16 +19,10 @@ while True:
             continue # Skip this ship
 
         entities_by_distance = game_map.nearby_entities_by_distance(ship)
-        # logging.info("Entities by distance: %s" % entities_by_distance)
-        # for i in entities_by_distance.items():
-        #     logging.info("%s - %s - %s" % (i, isinstance(i[1][0], hlt.entity.Planet), type(i[1][0])))
         f = filter(lambda e: isinstance(e[1][0], hlt.entity.Planet), entities_by_distance.items())
         planets_by_distance = list(f)
-        # logging.info("Planets by distance: %s" % planets_by_distance)
         closest_planets = sorted(planets_by_distance, key=lambda tup: tup[0])
-        # logging.info("Closest planet: %s" % closest_planets)
         closest_planets = [tup[1][0] for tup in closest_planets]
-        # closest_planet = closest_planets[0]
 
         for planet in closest_planets:
             logging.info('Chosen planet: %s' % planet)
@@ -43,7 +37,7 @@ while True:
                     ship.closest_point_to(planet),
                     game_map,
                     speed=int(hlt.constants.MAX_SPEED/2),
-                    ignore_ships=True)
+                    ignore_ships=False)
                 if navigate_command:
                     command_queue.append(navigate_command)
             break
