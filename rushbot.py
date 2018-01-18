@@ -1,6 +1,6 @@
 """
 Based on the Halite starter bot (Settler), and the "Improve Your Basic Bot" tutorial
-found on the Halite website: 
+found on the Halite website:
 https://halite.io/learn-programming-challenge/downloads-and-starter-kits/improve-basic-bot
 """
 import hlt # Halite engine
@@ -19,24 +19,26 @@ while True:
             continue # Skip this ship
 
         entities_by_distance = game_map.nearby_entities_by_distance(ship)
-        logging.info("Entities by distance: %s" % entities_by_distance)
-        planets_by_distance = list(
-            filter(
-                lambda entry : isinstance(entry[1], hlt.entity.Planet), 
-                entities_by_distance.items()
-            )
-        )
-        logging.info("Planets by distance: %s" % planets_by_distance)
-        closest_planets = sorted(list(planets_by_distance), key=lambda tup : tup[0])
-        logging.info("Closest planets: %s" % closest_planets)
-        closets_planets = [tup[0] for tup in closest_planets]
-        logging.info("Closest planets: %s" % closest_planets)
+        # logging.info("Entities by distance: %s" % entities_by_distance)
+        # for i in entities_by_distance.items():
+        #     logging.info("%s - %s - %s" % (i, isinstance(i[1][0], hlt.entity.Planet), type(i[1][0])))
+        f = filter(lambda e: isinstance(e[1][0], hlt.entity.Planet), entities_by_distance.items())
+        planets_by_distance = list(f)
+        # logging.info("Planets by distance: %s" % planets_by_distance)
+        closest_planets = sorted(planets_by_distance, key=lambda tup: tup[0])
+        # logging.info("Closest planet: %s" % closest_planets)
+        closest_planets = [tup[1][0] for tup in closest_planets]
         # closest_planet = closest_planets[0]
 
         for planet in closest_planets:
-            if ship.can_dock(planet):
+            logging.info('Chosen planet: %s' % planet)
+            if ship.can_dock(planet) and not planet.is_full():
+                logging.info('Docking ship')
                 command_queue.append(ship.dock(planet)) # Dock to nearest unowned planet if possible
             else:
+                if planet.is_owned() and planet.owner.id == game_map.my_id:
+                    continue
+                logging.info('Moving ship to closest planet')
                 navigate_command = ship.navigate(
                     ship.closest_point_to(planet),
                     game_map,
