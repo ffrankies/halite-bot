@@ -5,11 +5,15 @@ https://halite.io/learn-programming-challenge/downloads-and-starter-kits/improve
 """
 import hlt # Halite engine
 import logging
+import time
 
 game = hlt.Game("Rusher") # Init game
 logging.info("Starting Rusher bot!")
 
+MAX_TIME = 2000 * 0.97
+
 while True:
+    start = time.clock()
     # TURN START
     game_map = game.update_map() # Get latest version of map
 
@@ -23,6 +27,12 @@ while True:
         planets_by_distance = list(f)
         closest_planets = sorted(planets_by_distance, key=lambda tup: tup[0])
         closest_planets = [tup[1][0] for tup in closest_planets]
+
+        now = time.clock()
+        elapsed = (now - start) * 1000
+        logging.info('Elapsed time: %.1f' % elapsed)
+        if elapsed > MAX_TIME:
+            break
 
         for planet in closest_planets:
             logging.info('Chosen planet: %s' % planet)
