@@ -2,11 +2,12 @@
 Based on the Halite starter bot (Settler), and the "Improve Your Basic Bot" tutorial
 found on the Halite website:
 https://halite.io/learn-programming-challenge/downloads-and-starter-kits/improve-basic-bot
-Version 1 of HEX
+Version 3 of HEX
 """
 import hlt # Halite engine
 import logging
 import time
+import random
 
 game = hlt.Game("HEX") # Init game
 
@@ -25,6 +26,90 @@ def planets_by_distance(ship):
     return result
 # End of planets_by_distance()
 
+def timeout(start):
+    '''
+    If more than MAX_TIME elapsed since the start of turn, stop all calculations
+    and send the current command queue to prevent triggering a timeout.
+
+    Params:
+    - start (int): The system clock value at the start of the current turn
+
+    Returns:
+    - timeout (bool): True if approaching timeout, False otherwise
+    '''
+    now = time.clock()
+    elapsed = (now - start) * 1000
+    if elapsed >= MAX_TIME:
+        logging.info('Dodging timeout')
+        return True
+    return False
+# End of timeout()
+
+def select_new_target(ship):
+    '''
+    Selects a new target to move towards.
+
+    Params:
+    - ship (hlt.entity.Ship): The ship looking for a target
+
+    Return:
+    - dock_target (hlt.entity.Planet): The planet to which to dock, 
+            if possible. Defaults to None.
+    - target (hlt.entity.Entity): The entity towards which to move,
+            if not docking. Defaults to None.
+    '''
+    entities_by_distance = planets_by_distance(ship)
+    distances = sorted(entities_by_distance)
+    target = None
+    dock_target = None
+    for distance in distances:
+        planet = entities_by_distance[distance]
+        if planet.is_owned() and planet.owner.id != game_map.my_id:
+            # Not my planet, attack a random docked ship
+            target = random.choice(planet.all_docked_ships())
+            break
+        elif ship.can_dock(planet) and not planet.is_full():
+            dock_target = planet # Dock if you can
+            break
+        elif not planet.is_owned(): # Free planet
+            target = planet 
+            break
+        else: # Do not move towards planets I already own
+            continue
+    return dock_target, target
+# End of select_target()
+
+def select_old_target(ship):
+    '''
+    Docks, moves towards, or attacks old target.
+
+    Params:
+    - ship (hlt.entity.Ship): The ship looking for a target
+
+    Return:
+    - dock_target (hlt.entity.Planet): The planet to which to dock, 
+            if possible. Defaults to None.
+    - target (hlt.entity.Entity): The entity towards which to move,
+            if not docking. Defaults to None.
+    '''
+    target = None
+    dock_target = None
+    old_target = ship_targets[ship.id]
+    if isinstance(old_target, hlt.entity.Planet):
+        if old_target.is_owned() and old_target.owner.id != game_map.my_id:
+            target = random.choice(old_target.all_docked_ships())
+        elif ship.can_dock(old_target) and not old_target.is_full():
+            dock_target = old_target
+        else:
+            target = old_target
+    else:
+        target = old_target
+    return dock_target, target
+# End of select_old_target()
+
+ship_targets = dict()
+random.seed() # Seed with system time
+
 while True:
     start = time.clock()
     # TURN START
@@ -34,49 +119,27 @@ while True:
     for ship in game_map.get_me().all_ships():
         if ship.docking_status != ship.DockingStatus.UNDOCKED: # If ship is docked
             continue # Skip this ship
-
-        entities_by_distance = planets_by_distance(ship)
-        distances = sorted(entities_by_distance)
         
-        # Selecting target
-        target = None
-        dock_target = None
-        for distance in distances:
-            entity = entities_by_distance[distance]
-            if not isinstance(entity, hlt.entity.Planet):
-                continue
-            elif ship.can_dock(entity) and not entity.is_full():
-                dock_target = entity # Dock if you can
-                break
-            elif entity.is_owned() and entity.owner.id == game_map.my_id:
-                continue # Do not move towards planets I already own
-            elif entity.is_owned(): # Not my planet
-                target = entity.all_docked_ships()[0] # Attack a docked ship
-                break
-            else: # Free planet
-                target = entity
-                break
-        # End selecting target
+        # 50% chance of not changing targets
+        if ship.id in ship_targets and random.random() > 0.5:
+            dock_target, target = select_old_target(ship)
+        else:
+            dock_target, target = select_new_target(ship)
         
         if (dock_target is None) and (target is None):
             # No free planets, all planets are mine
             logging.error('Both targets are None')
-            continue
+            continue # Next ship
 
-        # Prevent timeout
-        now = time.clock()
-        elapsed = (now - start) * 1000
-        if elapsed >= MAX_TIME:
-            logging.info('Dodging timeout')
-            break
-        # End preventing timeouts
+        if timeout(start): break # Try to prevent timeout
 
         # Issuing command
         if dock_target is not None:
-            logging.info('Dock target: %s' % dock_target)
+            # logging.info('Dock target: %s' % dock_target)
             command_queue.append(ship.dock(dock_target))
         else:
-            logging.info('Target: %s' % target)
+            ship_targets[ship.id] = target
+            # logging.info('Target: %s' % target)
             navigate_command = ship.navigate(
                 ship.closest_point_to(target),
                 game_map,

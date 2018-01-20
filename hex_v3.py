@@ -45,9 +45,9 @@ def timeout(start):
     return False
 # End of timeout()
 
-def select_target(ship):
+def select_new_target(ship):
     '''
-    Selects a target to move towards.
+    Selects a new target to move towards.
 
     Params:
     - ship (hlt.entity.Ship): The ship looking for a target
@@ -60,26 +60,52 @@ def select_target(ship):
     '''
     entities_by_distance = planets_by_distance(ship)
     distances = sorted(entities_by_distance)
-
     target = None
     dock_target = None
     for distance in distances:
-        entity = entities_by_distance[distance]
-        if not isinstance(entity, hlt.entity.Planet):
-            continue # Next planet
-        elif ship.can_dock(entity) and not entity.is_full():
-            dock_target = entity # Dock if you can
+        planet = entities_by_distance[distance]
+        if planet.is_owned() and planet.owner.id != game_map.my_id:
+            # Not my planet, attack a random docked ship
+            target = random.choice(planet.all_docked_ships())
             break
-        elif entity.is_owned() and entity.owner.id == game_map.my_id:
-            continue # Do not move towards planets I already own
-        elif entity.is_owned(): # Not my planet
-            target = random.choice(entity.all_docked_ships()) # Attack a docked ship
+        elif ship.can_dock(planet) and not planet.is_full():
+            dock_target = planet # Dock if you can
             break
-        else: # Free planet
-            target = entity
+        elif not planet.is_owned(): # Free planet
+            target = planet 
             break
+        else: # Do not move towards planets I already own
+            continue
     return dock_target, target
 # End of select_target()
+
+def select_old_target(ship):
+    '''
+    Docks, moves towards, or attacks old target.
+
+    Params:
+    - ship (hlt.entity.Ship): The ship looking for a target
+
+    Return:
+    - dock_target (hlt.entity.Planet): The planet to which to dock, 
+            if possible. Defaults to None.
+    - target (hlt.entity.Entity): The entity towards which to move,
+            if not docking. Defaults to None.
+    '''
+    target = None
+    dock_target = None
+    old_target = ship_targets[ship.id]
+    if isinstance(old_target, hlt.entity.Planet):
+        if old_target.is_owned() and old_target.owner.id != game_map.my_id:
+            target = random.choice(old_target.all_docked_ships())
+        elif ship.can_dock(old_target) and not old_target.is_full():
+            dock_target = old_target
+        else:
+            target = old_target
+    else:
+        target = old_target
+    return dock_target, target
+# End of select_old_target()
 
 ship_targets = dict()
 random.seed() # Seed with system time
@@ -96,11 +122,9 @@ while True:
         
         # 50% chance of not changing targets
         if ship.id in ship_targets and random.random() > 0.5:
-            logging.info('Moving to old target!')
-            target = ship_targets[ship.id]
+            dock_target, target = select_old_target(ship)
         else:
-            logging.info('Moving to new target!')
-            dock_target, target = select_target(ship)
+            dock_target, target = select_new_target(ship)
         
         if (dock_target is None) and (target is None):
             # No free planets, all planets are mine
