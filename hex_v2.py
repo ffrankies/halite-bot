@@ -2,7 +2,7 @@
 Based on the Halite starter bot (Settler), and the "Improve Your Basic Bot" tutorial
 found on the Halite website:
 https://halite.io/learn-programming-challenge/downloads-and-starter-kits/improve-basic-bot
-Version 1 of HEX
+Version 2 of HEX
 """
 import hlt # Halite engine
 import logging
