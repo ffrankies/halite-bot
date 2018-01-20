@@ -73,10 +73,10 @@ while True:
 
         # Issuing command
         if dock_target is not None:
-            logging.info('Dock target: %s' % dock_target)
+            # logging.info('Dock target: %s' % dock_target)
             command_queue.append(ship.dock(dock_target))
         else:
-            logging.info('Target: %s' % target)
+            # logging.info('Target: %s' % target)
             navigate_command = ship.navigate(
                 ship.closest_point_to(target),
                 game_map,
